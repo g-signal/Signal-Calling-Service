@@ -99,6 +99,8 @@ services:
       - "8100:8100"
     entrypoint: calling_frontend
     command:
+      - --server_port
+      - 8080
       - --region
       - "us-west1"
       - --authentication-key
