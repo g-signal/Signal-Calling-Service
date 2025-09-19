@@ -4,3 +4,4 @@ target
 bin
 .vscode
 common/test_dynamic_config.yaml
+/config/

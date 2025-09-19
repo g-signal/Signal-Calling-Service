@@ -66,7 +66,7 @@ services:
   bootstrap:
     depends_on:
       - dynamodb
-    image: xxx/signal-calling-bootstrap:120.0.0
+    build: ./docker/bootstrap
     container_name: bootstrap
     environment:
       AWS_ACCESS_KEY_ID: 'DummyAccessKey'
@@ -77,13 +77,12 @@ services:
       - dynamodb
       - bootstrap
       - calling-backend
-    image: xxx/signal-calling-frontend:120.0.0
+    build:
+      args:
+        rust_flags: -Ctarget-cpu=native
+      dockerfile: frontend/Dockerfile
+      context: .
     container_name: calling-frontend
-    environment:
-      - REGION=us-west1
-      - AWS_ACCESS_KEY_ID=DummyAccessKey
-      - AWS_SECRET_ACCESS_KEY=DummyPassword
-      - AWS_DEFAULT_REGION=us-west-1
     ulimits:
       nproc: 65535
       nofile:
@@ -100,41 +99,41 @@ services:
       - "8402:8100"
     entrypoint: calling_frontend
     command:
-      - "--server-port"
-      - "8080"
-      - "--region"
+      - --server_port
+      - 8080
+      - --region
       - "us-west1"
-      - "--authentication-key"
+      - --authentication-key
       # Set the auth key to the one you want, but do not commit with it!
       - "deaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddeaddead"
-      - "--zkparams"
+      - --zkparams
       - "AMJqvmQRYwEGlm0MSy6QFPIAvgOVsqRASNX1meQyCOYHJFqxO8lITPkow5kmhPrsNbu9JhVfKFwesVSKhdZaqQko3IZlJZMqP7DDw0DgTWpdnYzSt0XBWT50DM1cw1nCUXXBZUiijdaFs+JRlTKdh54M7sf43pFxyMHlS3URH50LOeR8jVQKaUHi1bDP2GR9ZXp3Ot9Fsp0pM4D/vjL5PwoOUuzNNdpIqUSFhKVrtazwuHNn9ecHMsFsN0QPzByiDA8nhKcGpdzyWUvGjEDBvpKkBtqjo8QuXWjyS3jSl2oJ/Z4Fh3o2N1YfD2aWV/K88o+TN2/j2/k+KbaIZgmiWwppLU+SYGwthxdDfZgnbaaGT/vMYX9P5JlUWSuP3xIxDzPzxBEFho67BP0Pvux+0a5nEOEVEpfRSs61MMvwNXEKZtzkO0QFbOrFYrPntyb7ToqNi66OQNyTfl/J7kqFZg2MTm3CKjHTAIvVMFAGCIamsrT9sWXOtuNeMS94xazxDA=="
-      - "--version"
+      - --version
       - "1"
-      - "--max-clients-per-call"
+      - --max-clients-per-call
       - "50"
-      - "--cleanup-interval-ms"
+      - --cleanup-interval-ms
       - "10000"
-      - "--regional-url-template"
+      - --regional-url-template
       - "https://sfu.imba-test.com"
-      - "--calling-server-url"
+      - --calling-server-url
       - "http://calling-backend:8080"
-      - "--storage-table"
+      - --storage-table
       - "Rooms"
-      - "--storage-endpoint"
+      - --storage-endpoint
       - "http://dynamodb:8000"
-      - "--storage-region"
+      - --storage-region
       - "us-west-1"
-      - "--internal-api-port"
+      - --internal-api-port
       - "8100"
 
   calling-backend:
-    image: xxx/signal-calling-backend:120.0.0
+    build:
+      args:
+        rust_flags: -Ctarget-cpu=native
+      dockerfile: backend/Dockerfile
+      context: .
     container_name: calling-backend
-    environment:
-      - EXTERNAL_IP=172.17.0.1
-      - INTERNAL_IP=calling-backend
-      - REGION=us-west1
     ulimits:
       nproc: 65535
       nofile:
@@ -146,44 +145,44 @@ services:
           cpus: '4.0'
           memory: 5G
     ports:
-      - "8080:8080"
+      - "8403:8080"
       - "8404:8404"
       - "10000:10000/udp"
     entrypoint: calling_backend
     command:
       # Set these IPs to your host's IP if you need to access it externally.
-      - "--ice-candidate-ip"
-      - "172.17.0.1"
-      - "--signaling-ip"
-      - "172.17.0.1"
-      - "--ice-candidate-port"
+      - --ice-candidate-ip
+      - "127.0.0.1"
+      - --signaling-ip
+      - "127.0.0.1"
+      - --ice_candidate_port
       - "10000"
-      - "--ice-candidate-port-tcp"
+      - --ice-candidate-port-tcp
       - "8404"
-      - "--signaling-port"
+      - --signaling_port
       - "8080"
-      - "--inactivity-timeout-secs"
+      - --inactivity-timeout-secs
       - "60"
-      - "--diagnostics-interval-secs"
+      - --diagnostics-interval-secs
       - "10"
-      - "--approved-users-persistence-url"
+      - --approved-users-persistence-url
       - "http://calling-frontend:8100/v1/call-link-approvals"
-      - "--remove-call-records-base-url"
+      - --remove-call-records-base-url
       - "http://calling-frontend:8100/v2/conference"
 
   # Go here on the host to find out the ngrok tunnel URL: http://localhost:4040
-#  ngrok-frontend:
-#    depends_on:
-#      - calling-frontend
-#    image: ngrok/ngrok:latest
-#    ports:
-#      - 8405:4040
-#    # Optional: Set your ngrok auth token here to avoid timeouts and rate limits.
-#    #environment:
-#    #  - NGROK_AUTHTOKEN=
-#    command:
-#      - "http"
-#      - "calling-frontend:8080"
+  ngrok-frontend:
+    depends_on:
+      - calling-frontend
+    image: ngrok/ngrok:latest
+    ports:
+      - 8405:4040
+    # Optional: Set your ngrok auth token here to avoid timeouts and rate limits.
+    #environment:
+    #  - NGROK_AUTHTOKEN=
+    command:
+      - "http"
+      - "calling-frontend:8080"
 
 networks:
   default:
